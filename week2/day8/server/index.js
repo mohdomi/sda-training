@@ -13,10 +13,7 @@ const productService = require("./services/productService.js");
 const orderService = require("./services/orderService.js");
 const notificationService = require("./services/notificationService.js");
 
-const { errorHandler } = require("./middleware/errorHandler");
-const logger = require("./middleware/logger");
-const auth = require("./middleware/auth");
-
+const { errorHandler, logger } = require("./middleware/errorHandler");
 const userRoutes = require("./routes/userRoutes");
 const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
