@@ -98,7 +98,7 @@ const generatePostmanCollection = (specs) => {
   return collection;
 };
 
-const specs = require('../../docs/openapi');
+const specs = require('../docs/openapi');
 const collection = generatePostmanCollection(specs);
 
 const outputPath = path.join(__dirname, '../../docs/postman-collection.json');

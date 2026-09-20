@@ -1,12 +1,6 @@
 const swaggerUi = require('swagger-ui-express');
-// docs/openapi.js lives outside the Docker build context (day14/docs), so it
-// may be absent inside the image — degrade to an empty spec, never crash boot.
-let specs = { openapi: '3.0.0', info: { title: 'SDA Training API', version: '1.0.0' }, paths: {} };
-try {
-  specs = require('../../docs/openapi');
-} catch {
-  console.warn('OpenAPI spec not found (docs/openapi.js) — serving empty spec');
-}
+// Runtime OpenAPI spec lives in-context at server/docs/openapi.js.
+const specs = require('../docs/openapi');
 
 const swaggerOptions = {
   explorer: true,
