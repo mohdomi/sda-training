@@ -21,9 +21,11 @@ COPY . .
 USER nodejs
 EXPOSE 3000
 
-# Container is healthy when the public liveness probe reports healthy.
+# Liveness = HTTP 200 from /health (it always returns 200 while the process
+# serves). Do NOT grep for "healthy": that field is workload wellness
+# (heap pressure), and conflating the two flaps the container needlessly.
 # (busybox wget ships with node:22-alpine, so no extra packages needed.)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- http://localhost:3000/health | grep -q '"status":"healthy"'
+  CMD wget -q -O /dev/null http://localhost:3000/health
 
 CMD ["node", "index.js"]
