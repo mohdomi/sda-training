@@ -124,8 +124,8 @@ build/
 .pub/
 pubspec.lock
 
-# AI/ML models
-models/
+# AI/ML model artifacts (extensions only — a bare models/ entry would also
+# ignore backend source dirs like week2/day14/server/models/)
 *.model
 *.pkl
 *.h5
@@ -152,3 +152,6 @@ config.bat
 
 #Environments
 .env
+
+# Local PR description drafts (not for committing)
+PR_DESCRIPTION/
