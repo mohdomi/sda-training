@@ -562,6 +562,17 @@ By the end of Day 16, you should have:
 3. **Prepare for Day 17**: Review Kubernetes concepts
 4. **Update progress**: Document your learning in the daily summary
 
+## ✅ Implementation Notes (this repo)
+
+- **Task 1 (Dockerfile)**: Already done via `server/Dockerfile` (kept as-is). Adaptation: `node:22-alpine`, `deps` + `runner` stages, non-root `nodejs` user, `HEALTHCHECK` via `wget http://localhost:3000/health`, `CMD ["node", "index.js"]`. Spec template assumes a `dist/` build which this plain-JS server does not have; added `server/healthcheck.js` (standalone `node healthcheck.js` probe) for spec parity without changing the working Dockerfile.
+- **Task 2 (Compose)**: Already done via `docker-compose.yml` (dev data layer) + `docker-compose.prod.yml` (prod app + mongo + postgres + redis + nginx), both validated with `docker compose config`. Added only: `prometheus` + `grafana` services under `monitoring` profile (`--profile monitoring`), `prometheus_data`/`grafana_data` volumes.
+- **Task 3 (Nginx)**: Extended `nginx.conf` in place (same mount path, same `upstream api`): added access/error logs, full gzip, `api` (10r/s) + `login` (5r/m) rate-limit zones, `location /api/` and `location = /api/auth/login` proxy blocks, `X-XSS-Protection` header. Existing `/` and `/health` proxy behavior unchanged.
+- **Task 4 (Monitoring)**: Created `monitoring/prometheus.yml` + `monitoring/alert_rules.yml`. Note: app exposes liveness at `/health` (public) and detailed JSON at `/health/metrics` (admin-only), so prometheus scrapes `/health`; scrape of authenticated `/metrics` path from spec template does not apply.
+- **Task 5 (Optimize script)**: Created `scripts/docker-optimize.sh` (prune, build `./server` runner target, image analysis, perf test).
+- **Docs**: Created `docs/docker-guide.md` per spec.
+
+Validated: `docker compose config` (dev + prod) OK, `node --check server/healthcheck.js` OK.
+
 ## 📚 Additional Resources
 
 - [Docker Documentation](https://docs.docker.com/)
