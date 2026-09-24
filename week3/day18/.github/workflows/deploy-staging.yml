@@ -1,0 +1,62 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+
+env:
+  ENVIRONMENT: staging
+  NAMESPACE: sda-training-staging
+
+jobs:
+  deploy:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+
+    - name: Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+
+    - name: Update image tag
+      run: |
+        sed -i "s|image: sda-training:latest|image: sda-training:${{ github.sha }}|g" k8s/deployment.yaml
+
+    - name: Deploy to staging
+      run: |
+        kubectl apply -f k8s/namespace.yaml
+        kubectl apply -f k8s/configmap.yaml
+        kubectl apply -f k8s/secret.yaml
+        kubectl apply -f k8s/persistent-volume-claim.yaml
+        kubectl apply -f k8s/database-storage.yaml
+        kubectl apply -f k8s/mongodb-deployment.yaml
+        kubectl apply -f k8s/postgresql-deployment.yaml
+        kubectl apply -f k8s/redis-deployment.yaml
+        kubectl apply -f k8s/deployment.yaml
+        kubectl apply -f k8s/service.yaml
+        kubectl apply -f k8s/ingress.yaml
+
+    - name: Wait for deployment
+      run: |
+        kubectl rollout status deployment/sda-training-app -n ${{ env.NAMESPACE }}
+
+    - name: Run health checks
+      run: |
+        kubectl get pods -n ${{ env.NAMESPACE }}
+        kubectl get services -n ${{ env.NAMESPACE }}
+        kubectl get ingress -n ${{ env.NAMESPACE }}
+
+    - name: Run integration tests
+      run: |
+        kubectl port-forward service/sda-training-service 3000:3000 -n ${{ env.NAMESPACE }} &
+        sleep 10
+        curl -f http://localhost:3000/health || exit 1
