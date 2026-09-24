@@ -1,0 +1,107 @@
+# Production stack: Day 14 API + data layer + reverse proxy.
+# Usage:
+#   cp server/.env.example server/.env   # fill JWT_SECRET, FRONTEND_URL=https://your-domain.com
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml exec app npm run migrate
+#
+# Notes:
+# - Only nginx publishes ports. DBs are reachable inside the compose network
+#   only (no host port leak of mongo/postgres/redis in prod).
+# - One Node process per app container (CLUSTER=false in the image); scale with
+#   `docker compose -f docker-compose.prod.yml up -d --scale app=3`.
+name: day14-prod
+
+services:
+  app:
+    build: ./server
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      NODE_ENV: production
+      # Inside compose, hosts are service names — override the localhost defaults:
+      MONGODB_URI: mongodb://mongo:27017/sda-training
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: sda_training
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mongo:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - app_logs:/app/logs
+    networks:
+      - web
+      - data
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - data
+
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sda_training
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sda_training"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - data
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      # - "443:443"  # enable after certbot issues certs (see deployment guide)
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      # - ./certbot/conf:/etc/letsencrypt:ro  # SSL certs (see guide)
+    depends_on:
+      - app
+    networks:
+      - web
+
+volumes:
+  mongo_data:
+  postgres_data:
+  redis_data:
+  app_logs:
+
+networks:
+  web:
+  data:

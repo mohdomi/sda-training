@@ -1,0 +1,30 @@
+.real-time-dashboard { max-width: 1100px; margin: 0 auto; padding: 1.5rem; font-family: system-ui, sans-serif; }
+.dashboard-header { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center; }
+.dashboard-controls { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+.metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.metrics-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 1rem; background: #fff; }
+.card-header { display: flex; gap: 0.5rem; align-items: center; }
+.card-value { font-size: 1.6rem; font-weight: 700; }
+.card-change.positive { color: #10b981; }
+.card-change.negative { color: #ef4444; }
+.card-change.neutral { color: #6b7280; }
+.card-error { color: #ef4444; }
+.card-connection { margin-left: auto; }
+.charts-section { margin-top: 1.5rem; }
+.chart-container { border: 1px solid #e5e7eb; border-radius: 12px; padding: 1rem; background: #fff; }
+.chart-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.chart-tabs .active { font-weight: 700; }
+.chart-bar-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+.chart-label { width: 90px; }
+.chart-bar-track { flex: 1; background: #f3f4f6; border-radius: 6px; overflow: hidden; }
+.chart-bar-fill { height: 14px; background: #3b82f6; }
+.chart-value { width: 60px; text-align: right; }
+.connection-status { border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.5rem 0.75rem; background: #fff; }
+.status-indicator { display: flex; gap: 0.5rem; align-items: center; cursor: pointer; }
+.last-update { color: #6b7280; font-size: 0.85rem; }
+.status-details { margin-top: 0.5rem; }
+.loading-container { text-align: center; padding: 3rem 1rem; }
+.spinner { width: 36px; height: 36px; border: 4px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; margin: 0 auto 1rem; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.refresh-btn, .reconnect-btn { cursor: pointer; }
+.auto-refresh-toggle { display: flex; gap: 0.5rem; align-items: center; }
