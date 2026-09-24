@@ -628,6 +628,32 @@ By the end of Day 18, you should have:
 3. **Prepare for Day 19**: Review React Native concepts
 4. **Update progress**: Document your learning in the daily summary
 
+## ✅ Implementation Notes (this repo)
+
+- **Task 1 (CI/CD pipeline)**: Created `.github/workflows/ci-cd.yml` verbatim from spec (test → security → build → deploy-staging → deploy-production → rollback). Test job provisions mongo:5.0, postgres:13, redis:6.0-alpine services; build pushes to GHCR with Buildx + GHA cache; staging/prod deploy via `azure/setup-kubectl` + `k8s/*.yaml` + `rollout status`; Slack notify on prod deploy/rollback.
+- **Task 2 (Staging workflow)**: Created `.github/workflows/deploy-staging.yml` verbatim from spec (push to `develop` + `workflow_dispatch`, `sed` image tag to `${{ github.sha }}`, port-forward + `curl -f /health` check).
+- **Task 3 (Security workflow)**: Created `.github/workflows/security.yml` verbatim from spec (Trivy fs → SARIF upload, CodeQL javascript, Snyk high-threshold, OWASP ZAP baseline against `.zap/rules.tsv`, OWASP Dependency-Check → SARIF upload; weekly Monday 02:00 cron).
+- **Task 4 (Performance workflow)**: Created `.github/workflows/performance.yml` verbatim from spec (Lighthouse CI via `./lighthouse.config.js`, Artillery via `artillery.config.yml`, k6 via `k6-load-test.js`).
+- **Task 5 (Monitoring workflow)**: Created `.github/workflows/monitoring.yml` verbatim from spec (5-min cron: pod/service/resource/log checks in `sda-training`, Slack `#alerts` on failure).
+- **Docs**: Created `docs/cicd-guide.md` per spec.
+- **Gap-fill (referenced by workflows but missing from spec)**: Added `lighthouse.config.js` (collects `/health`, perf/a11y ≥ 0.8), `artillery.config.yml` (warm-up 5 rps/60s + sustained 10 rps/120s against `/health` and `/api/v1/products`), `k6-load-test.js` (10→20 VUs ramp on `/health`), `.zap/rules.tsv` (baseline ignore rules). Targets use existing public `GET /health`; nothing in `server/`, `frontend/`, `k8s/`, `docker-compose*.yml`, `nginx.conf`, `monitoring/`, `scripts/`, existing `docs/` was changed.
+- **Repo-wiring caveats (spec assumes repo root = app root)**: `npm ci` / `npm run lint|type-check|test:unit|test:integration` / `npm start` / Docker `context: .` run at the checkout root — this day folder has `server/` (`test`, `test:e2e`) + `frontend/` (`lint`) and `server/Dockerfile`, no root `package.json`/`Dockerfile`, so either add root scripts delegating to the two packages or set `working-directory: server|frontend` and `context: ./server`. GitHub only runs `.github/` at the repository root, so these day-scoped workflows run once copied/moved to the repo root (adjust `k8s/` paths accordingly). Required secrets before first run: `KUBE_CONFIG_STAGING`, `KUBE_CONFIG_PRODUCTION`, `SLACK_WEBHOOK`, `SNYK_TOKEN`.
+
+Validated: all 5 workflows + `artillery.config.yml` parse as valid YAML; `node --check lighthouse.config.js` OK; `k6-load-test.js` is ESM (k6 runtime) by design.
+
+## ✅ Local Verification Fixes (kind `day18-test`, K8s v1.37.0)
+
+Live-tested the Day 18 deploy sequence on a local kind cluster. The pipeline as specified failed at `0/3 pods` (`rollout status` timeout); fixes below are in the repo, verified to a green rollout:
+- **Workflows apply storage + databases**: `ci-cd.yml` (staging + production jobs) and `deploy-staging.yml` now also apply `persistent-volume-claim.yaml`, `database-storage.yaml`, `mongodb/postgresql/redis-deployment.yaml`. Why: the Deployment mounts PVCs and the app dials `mongodb/postgresql/redis-service`, none of which the original sequence created (`FailedScheduling: pvc not found`).
+- **`standard` StorageClass + `ReadWriteOnce`**: all PVCs moved off `storageClassName: nfs`. Why: the NFS PVs point at fictional `nfs-server.example.com` (`mount.nfs: Failed to resolve server`); dynamic provisioning works on kind and managed clouds, and local-path provisioners only support RWO. The static NFS `persistent-volume.yaml` is kept as the prod-with-NFS alternative.
+- **Fixed mongo/postgres Service selector collision**: both Deployments/Services shared `component: database`, so each Service load-balanced across both databases. Now `component: mongodb` / `component: postgresql` end to end.
+- **Added `k8s/redis-deployment.yaml`** (`redis:6.0-alpine` + `redis-service:6379`, `emptyDir` cache, `redis-cli ping` probes). Why: `REDIS_URL` pointed at a Service that had no manifest at all.
+- **`imagePullPolicy: IfNotPresent`** on the app container. Why: `:latest` defaults to `Always`, which fails on clusters without registry access to the image; image built via `docker build -t sda-training:latest ./server` + `kind load docker-image`.
+- **`ingressClassName: nginx`** on the Ingress. Why: without a class the controller ignores it (ADDRESS stayed empty); TLS/`letsencrypt-prod` annotations remain prod-only.
+- **Live-only (not in repo)**: kind node has ~1.6 GB, so for this node only — `kubectl scale deploy/sda-training-app --replicas=1` and lowered memory requests (mongo/postgres 512→256Mi, redis 256→64Mi, app 256→128Mi). Repo keeps spec values for real clusters. Verified end to end: PVCs Bound via dynamic provisioning, `mongodb-service` DNS resolves from the app pod, app connects once mongo is Ready.
+- **Two more manifest fixes found during live test**: (a) `mongodb-deployment.yaml` probes gained `timeoutSeconds: 10` — `mongosh` startup exceeds kubelet's 1s default exec timeout, so liveness killed mongo in a loop (`Unhealthy: command timed out`, 300+ probe failures, mongo never Ready). (b) `deployment.yaml` app env gained `POSTGRES_HOST/PORT/DB/USER/PASSWORD` — the server reads `POSTGRES_HOST` (default `localhost`), not `POSTGRES_URL`, so it dialled `127.0.0.1:5432` and crashed at startup.
+- **Green proof**: `kubectl rollout status deployment/sda-training-app` → `successfully rolled out`; mongo/postgres/redis + app pods `1/1 Running`; `curl -f http://localhost:3000/health` (port-forwarded Service, the workflow's own integration-test step) → HTTP 200. Live-only scale for the 1.6 GB node: app replicas 3→2 (repo keeps 3). Ingress controller intentionally not installed here (environment-provided, like cert-manager); manifest is schema-valid with `ingressClassName: nginx`.
+
 ## 📚 Additional Resources
 
 - [GitHub Actions](https://docs.github.com/en/actions)

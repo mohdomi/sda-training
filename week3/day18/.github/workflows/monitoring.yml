@@ -1,0 +1,51 @@
+name: Monitoring and Alerting
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # Every 5 minutes
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    name: Monitor Application Health
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+
+    - name: Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+
+    - name: Check pod health
+      run: |
+        kubectl get pods -n sda-training
+        kubectl describe pods -n sda-training
+
+    - name: Check service health
+      run: |
+        kubectl get services -n sda-training
+        kubectl get ingress -n sda-training
+
+    - name: Check resource usage
+      run: |
+        kubectl top pods -n sda-training
+        kubectl top nodes
+
+    - name: Check logs for errors
+      run: |
+        kubectl logs -l app=sda-training -n sda-training --tail=100
+
+    - name: Send alert if unhealthy
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#alerts'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow

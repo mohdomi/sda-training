@@ -1,0 +1,19 @@
+groups:
+  - name: app-health
+    interval: 30s
+    rules:
+      - alert: AppDown
+        expr: up{job="app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "App container is down"
+
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes{job="app"} > 500 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "App memory usage above 500MB"
