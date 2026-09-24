@@ -635,6 +635,18 @@ By the end of Day 17, you should have:
 3. **Prepare for Day 18**: Review CI/CD pipeline concepts
 4. **Update progress**: Document your learning in the daily summary
 
+## ✅ Implementation Notes (this repo)
+
+- **Task 1 (Manifests)**: Created `k8s/namespace.yaml`, `k8s/configmap.yaml`, `k8s/deployment.yaml` verbatim from spec. `k8s/secret.yaml` fills the spec's `<base64-encoded-...>` placeholders with placeholder base64 values (replace via `echo -n '<value>' | base64` before applying); added `MONGO_ROOT_PASSWORD` + `POSTGRES_PASSWORD` keys because Task 4 Deployments reference them but the spec's Secret template omits them.
+- **Task 2 (Service/Ingress)**: Created `k8s/service.yaml`, `k8s/ingress.yaml` verbatim from spec. Requires ingress-nginx + cert-manager (`letsencrypt-prod`) for TLS/annotations to work.
+- **Task 3 (Storage)**: Created `k8s/persistent-volume.yaml`, `k8s/persistent-volume-claim.yaml` verbatim from spec (NFS `app-logs` 10Gi + `app-uploads` 50Gi). Requires an NFS provisioner or replace `storageClassName: nfs`.
+- **Task 4 (Databases)**: Created `k8s/mongodb-deployment.yaml` (mongo:5.0), `k8s/postgresql-deployment.yaml` (postgres:13) verbatim from spec, each with its ClusterIP Service. Added `k8s/database-storage.yaml` (`mongodb-data-pvc` 20Gi, `postgresql-data-pvc` 20Gi) — referenced by the Deployments but missing from the spec.
+- **Task 5 (Monitoring)**: Created `k8s/monitoring.yaml` verbatim from spec. Added `k8s/prometheus-config.yaml` (`prometheus-config` ConfigMap) + `prometheus-data-pvc` in `k8s/database-storage.yaml` — both referenced by the Deployment but missing from the spec. Scrape target adapted to `sda-training-service:3000/health` (public liveness route; `/metrics` in this repo is admin-only per `server/routes/api/v1/healthRoutes.js`).
+- **Docs**: Created `docs/kubernetes-guide.md` per spec.
+- **Untouched**: `server/`, `frontend/`, `docker-compose*.yml`, `nginx.conf`, `monitoring/`, `scripts/`, existing `docs/` kept as-is. Probes use existing public `GET /health`; image `sda-training:latest` built from `server/Dockerfile` via `docker build -t sda-training:latest ./server`.
+
+Validated: all 13 `k8s/*.yaml` parse as valid YAML; all `secretKeyRef` keys, `claimName`s, and ConfigMap refs resolve.
+
 ## 📚 Additional Resources
 
 - [Kubernetes Documentation](https://kubernetes.io/docs/)
