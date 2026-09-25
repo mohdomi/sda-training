@@ -18,9 +18,9 @@ const ProfileScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24},
-  title: {fontSize: 20, fontWeight: 'bold', marginBottom: 4},
-  subtitle: {fontSize: 14, color: 'gray', marginBottom: 16},
+  container: {flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#fff'},
+  title: {fontSize: 20, fontWeight: 'bold', marginBottom: 4, color: '#000'},
+  subtitle: {fontSize: 14, color: '#000', marginBottom: 16},
 });
 
 export default ProfileScreen;

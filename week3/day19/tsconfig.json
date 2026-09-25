@@ -10,7 +10,7 @@
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
+    "types": ["react-native", "jest", "node"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]

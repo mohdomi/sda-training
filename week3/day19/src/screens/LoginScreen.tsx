@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {View, Text, TextInput, Button, StyleSheet} from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
 import {loginUser} from '../store/slices/authSlice';
@@ -8,7 +8,13 @@ const LoginScreen = ({navigation}: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const dispatch = useDispatch<AppDispatch>();
-  const {loading, error} = useSelector((state: RootState) => state.auth);
+  const {loading, error, isAuthenticated} = useSelector((state: RootState) => state.auth);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigation.replace('Main');
+    }
+  }, [isAuthenticated, navigation]);
 
   const handleLogin = () => {
     dispatch(loginUser({email, password}));
@@ -20,6 +26,7 @@ const LoginScreen = ({navigation}: any) => {
       <TextInput
         style={styles.input}
         placeholder="Email"
+        placeholderTextColor="#888"
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -27,6 +34,7 @@ const LoginScreen = ({navigation}: any) => {
       <TextInput
         style={styles.input}
         placeholder="Password"
+        placeholderTextColor="#888"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -38,9 +46,9 @@ const LoginScreen = ({navigation}: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: {flex: 1, justifyContent: 'center', padding: 24},
-  title: {fontSize: 24, fontWeight: 'bold', marginBottom: 24, textAlign: 'center'},
-  input: {borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 12},
+  container: {flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#fff'},
+  title: {fontSize: 24, fontWeight: 'bold', marginBottom: 24, textAlign: 'center', color: '#000'},
+  input: {borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 12, color: '#000'},
   error: {color: 'red', marginBottom: 12, textAlign: 'center'},
 });
 

@@ -14,13 +14,13 @@ class ApiService {
     this.token = await AsyncStorage.getItem('authToken');
   }
 
-  private async getHeaders(): Promise<HeadersInit> {
-    const headers: HeadersInit = {
+  private async getHeaders(): Promise<Record<string, string>> {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
     if (this.token) {
-      (headers as Record<string, string>).Authorization = `Bearer ${this.token}`;
+      headers.Authorization = `Bearer ${this.token}`;
     }
 
     return headers;
@@ -57,18 +57,18 @@ class ApiService {
   async login(credentials: { email: string; password: string }) {
     const response = await this.request<{
       success: boolean;
-      data: { user: User; token: string };
+      data: { user: User; accessToken: string; refreshToken: string };
     }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
 
     if (response.success) {
-      this.token = response.data.token;
-      await AsyncStorage.setItem('authToken', response.data.token);
+      this.token = response.data.accessToken;
+      await AsyncStorage.setItem('authToken', response.data.accessToken);
     }
 
-    return response.data;
+    return { user: response.data.user, token: response.data.accessToken };
   }
 
   async logout() {
@@ -77,8 +77,11 @@ class ApiService {
     await AsyncStorage.removeItem('authToken');
   }
 
-  async getCurrentUser() {
-    return this.request<User>('/auth/me');
+  async getCurrentUser(): Promise<User> {
+    const response = await this.request<{ success: boolean; data: User }>(
+      '/auth/me',
+    );
+    return response.data;
   }
 
   async getUsers(filters: UserFilters = {}) {

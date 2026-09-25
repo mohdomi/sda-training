@@ -15,15 +15,16 @@ const AnalyticsScreen = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Analytics</Text>
-      {loading ? <Text>Loading...</Text> : null}
-      {data ? <Text>Total users: {data.totalUsers}</Text> : null}
+      {loading ? <Text style={styles.text}>Loading...</Text> : null}
+      {data ? <Text style={styles.text}>Total users: {data.totalUsers}</Text> : null}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24},
-  title: {fontSize: 20, fontWeight: 'bold', marginBottom: 8},
+  container: {flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#fff'},
+  title: {fontSize: 20, fontWeight: 'bold', marginBottom: 8, color: '#000'},
+  text: {color: '#000'},
 });
 
 export default AnalyticsScreen;

@@ -9,14 +9,15 @@ const SettingsScreen = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Settings</Text>
-      <Text>Pending offline requests: {queueLength}</Text>
+      <Text style={styles.text}>Pending offline requests: {queueLength}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24},
-  title: {fontSize: 20, fontWeight: 'bold', marginBottom: 8},
+  container: {flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#fff'},
+  title: {fontSize: 20, fontWeight: 'bold', marginBottom: 8, color: '#000'},
+  text: {color: '#000'},
 });
 
 export default SettingsScreen;
