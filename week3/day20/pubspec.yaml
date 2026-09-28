@@ -1,0 +1,55 @@
+name: sda_training_app
+description: SDA Training Flutter Application
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  provider: ^6.0.5
+
+  # HTTP Client
+  dio: ^5.3.2
+
+  # Local Storage
+  shared_preferences: ^2.2.2
+
+  # Network
+  connectivity_plus: ^5.0.2
+
+  # Notifications
+  flutter_local_notifications: ^16.3.0
+
+  # UI
+  cached_network_image: ^3.3.0
+  flutter_svg: ^2.0.9
+
+  # Utils
+  intl: ^0.18.1
+  logger: ^2.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: fonts/Roboto-Regular.ttf
+        - asset: fonts/Roboto-Bold.ttf
+          weight: 700
