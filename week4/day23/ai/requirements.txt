@@ -1,0 +1,20 @@
+# Day 23 runtime dependencies.
+#
+# Install: pip install -r ai/requirements.txt
+#
+# Notes:
+# - `openai>=1.0` uses the new client API
+#   (`client.chat.completions.create`), NOT the removed
+#   `openai.ChatCompletion.create` from the old spec drafts.
+# - `transformers` / `torch` are optional: HuggingFaceIntegration
+#   lazy-imports them only when a local pipeline is loaded, so the
+#   Flask API and tests run without them. For a light CPU setup,
+#   prefer `sshleifer/distilbart-cnn-12-6` over
+#   `facebook/bart-large-cnn`.
+# - `torch` is intentionally NOT pinned here: install the CPU or CUDA
+#   wheel that matches your machine from https://pytorch.org/get-started/
+openai>=1.0
+flask>=3.0
+requests>=2.31
+python-dotenv>=1.0
+transformers>=4.30
