@@ -9,6 +9,8 @@ import DashboardScreen from '../screens/DashboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
+// TEMPORARY day26 on-device test harness (revert before final commit).
+import AIDay26Screen from '../screens/AIDay26Screen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -28,6 +30,8 @@ const TabNavigator = () => {
             iconName = 'person';
           } else if (route.name === 'Settings') {
             iconName = 'settings';
+          } else if (route.name === 'AI 26') {
+            iconName = 'smart-toy';
           } else {
             iconName = 'help';
           }
@@ -43,6 +47,8 @@ const TabNavigator = () => {
       <Tab.Screen name="Analytics" component={AnalyticsScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
+      {/* TEMPORARY day26 on-device test harness (revert before final commit). */}
+      <Tab.Screen name="AI 26" component={AIDay26Screen} />
     </Tab.Navigator>
   );
 };
