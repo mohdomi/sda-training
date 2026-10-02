@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<!-- Day 25 Task 5: complete AI web integration example.
+     Mounts the three spec components (chatbot, content generator,
+     recommendations) plus the analytics card from the spec.
+     Serve the backend first (`python -m ai.web_ai_service` from
+     week4/day25, mock mode when no key), then open this file
+     (or serve this folder) so /api/ai/* resolves. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Web Integration Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #d1d5db;
+            color: #374151;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .recommendation-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 16px;
+        }
+
+        .recommendation-image img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .recommendation-content {
+            flex: 1;
+        }
+
+        .recommendation-meta {
+            display: flex;
+            gap: 16px;
+            margin: 8px 0;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .recommendation-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .feedback-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .feedback-btn {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .feedback-btn:hover {
+            background: #f3f4f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- AI Chatbot -->
+        <div class="card">
+            <h2>AI Chatbot</h2>
+            <div id="chatbot-container"></div>
+        </div>
+
+        <!-- AI Content Generator -->
+        <div class="card">
+            <h2>AI Content Generator</h2>
+            <div id="content-generator-container"></div>
+        </div>
+
+        <!-- AI Recommendations -->
+        <div class="card">
+            <h2>AI Recommendations</h2>
+            <div id="recommendations-container"></div>
+        </div>
+
+        <!-- AI Analytics -->
+        <div class="card">
+            <h2>AI Analytics</h2>
+            <div id="analytics-container">
+                <p>AI-powered analytics and insights will be displayed here.</p>
+                <button class="btn btn-primary" onclick="loadAnalytics()">Load Analytics</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="ai/web-components/ai-chatbot.js"></script>
+    <script src="ai/web-components/ai-content-generator.js"></script>
+    <script src="ai/web-components/ai-recommendations.js"></script>
+
+    <script>
+        // Initialize AI components
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize chatbot
+            const chatbot = new AIChatbot('chatbot-container', {
+                apiUrl: '/api/ai/chat',
+                theme: 'light',
+                position: 'bottom-right'
+            });
+
+            // Initialize content generator
+            const contentGenerator = new AIContentGenerator('content-generator-container', {
+                apiUrl: '/api/ai/generate'
+            });
+
+            // Initialize recommendations
+            const recommendations = new AIRecommendations('recommendations-container', {
+                apiUrl: '/api/ai/recommendations',
+                maxRecommendations: 5
+            });
+        });
+
+        // Analytics function
+        function loadAnalytics() {
+            const container = document.getElementById('analytics-container');
+            container.innerHTML = `
+                <div class="loading-spinner"></div>
+                <p>Loading analytics...</p>
+            `;
+
+            // Simulate analytics loading
+            setTimeout(() => {
+                container.innerHTML = `
+                    <h3>AI Analytics Dashboard</h3>
+                    <div class="analytics-grid">
+                        <div class="analytics-item">
+                            <h4>User Engagement</h4>
+                            <p>85% increase in user engagement</p>
+                        </div>
+                        <div class="analytics-item">
+                            <h4>Content Performance</h4>
+                            <p>AI-generated content performs 40% better</p>
+                        </div>
+                        <div class="analytics-item">
+                            <h4>Recommendation Accuracy</h4>
+                            <p>92% accuracy in recommendations</p>
+                        </div>
+                    </div>
+                `;
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

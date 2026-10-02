@@ -1,0 +1,19 @@
+# Day 25 runtime dependencies.
+#
+# Install: pip install -r ai/requirements.txt
+#
+# Notes (Mock + Groq-ready, day23/day24 convention):
+# - `openai>=1.0` uses the new client API
+#   (`client.chat.completions.create`), NOT the removed
+#   `openai.ChatCompletion.create` from old spec drafts.
+#   `ai/openai_integration.py` (copied from day23) already handles this
+#   plus `OPENAI_BASE_URL` so the SAME code talks to free
+#   OpenAI-compatible providers (Groq, OpenRouter, HF Router, Gemini)
+#   with no code change — just env vars.
+# - Flask is imported LAZILY inside `ai/web_ai_service.py`, so
+#   `import ai.web_ai_service` works even before `pip install`.
+# - No torch/transformers/langchain needed for day25.
+openai>=1.0
+flask>=3.0
+requests>=2.31
+python-dotenv>=1.0
