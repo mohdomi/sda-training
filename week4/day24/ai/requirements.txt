@@ -1,0 +1,26 @@
+# Day 24 runtime dependencies.
+#
+# Install: pip install -r ai/requirements.txt
+#
+# Notes (per user picks: "Modern LangChain only", "Mock + Groq-ready"):
+# - Modern split packages: `langchain-openai` provides ChatOpenAI,
+#   `langchain-core` provides Tool/prompt primitives,
+#   `langchain-community` provides community loaders (and pulls in
+#   `langchain-classic`, home of AgentExecutor/create_react_agent on
+#   the 1.x line; on the 0.2/0.3 line they live in `langchain.agents`
+#   — ai/agents code tries both paths). The spec's
+#   `from langchain.llms import OpenAI` + `initialize_agent` were
+#   removed upstream and fail on fresh installs.
+# - All langchain imports in ai/agents/* are LAZY, so mock mode (no key)
+#   and the Flask API boot WITHOUT these installed. Install them only
+#   for real (non-mock) agent runs.
+# - Free providers (Groq / OpenRouter / HF Router / Gemini-compatible
+#   endpoints) need no extra dep: set OPENAI_BASE_URL + OPENAI_API_KEY.
+langchain>=0.3
+langchain-openai>=0.2
+langchain-core>=0.3
+langchain-community>=0.3
+openai>=1.0
+flask>=3.0
+requests>=2.31
+python-dotenv>=1.0
