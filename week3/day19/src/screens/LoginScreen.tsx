@@ -41,6 +41,13 @@ const LoginScreen = ({navigation}: any) => {
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button title={loading ? 'Signing in...' : 'Sign In'} onPress={handleLogin} />
+      {/* TEMPORARY day26 on-device test harness (revert before final commit). */}
+      <View style={{marginTop: 12}}>
+        <Button
+          title="Continue as Guest (AI Test)"
+          onPress={() => navigation.replace('Main')}
+        />
+      </View>
     </View>
   );
 };

@@ -1,0 +1,6 @@
+# Day 26 runtime dependencies.
+# Install: pip install -r ai/requirements.txt
+openai>=1.0
+flask>=3.0
+requests>=2.31
+python-dotenv>=1.0
