@@ -1,0 +1,1 @@
+Web-only MVP for demo reliability. Mobile stretch reuses `week3/day19` RN `SDATrainingApp`: point `apiService` baseURL to this backend `/api`, reuse JWT + `/tasks` + `/ai/chat` endpoints. No mobile code duplicated here until web MVP is green.
