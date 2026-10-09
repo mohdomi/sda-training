@@ -141,12 +141,16 @@ function Shell() {
         sx={{
           flex: 1,
           minWidth: 0,
-          px: { xs: 2, sm: 3, md: 4 },
+          width: '100%',
+          maxWidth: 1440,
+          mx: 'auto',
+          px: { xs: 2, sm: 3, md: 5 },
           py: { xs: 2, md: 4 },
-          pt: desktop ? undefined : 8,
-          maxWidth: 1080,
         }}
       >
+        {/* Fixed mobile AppBar clearance: a real spacer beats padding hacks
+            (sx merge order made pt lose to py, hiding content under the bar). */}
+        {!desktop && <Toolbar variant="dense" />}
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

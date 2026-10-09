@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box, Button, TextField, Typography, IconButton, Checkbox, Divider, Select, MenuItem,
-  Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, Paper, Alert,
+  Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, Paper, Alert, Skeleton,
   useMediaQuery, useTheme,
 } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -168,6 +168,7 @@ function ListDropZone({ listId, active }: { listId: string; active: boolean }) {
 export default function Tasks() {
   const [lists, setLists] = useState<BoardList[]>([]);
   const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [newListTitle, setNewListTitle] = useState('');
   const [addingList, setAddingList] = useState(false);
@@ -183,6 +184,8 @@ export default function Tasks() {
       setLoadErr(null);
     } catch {
       setLoadErr('Could not load your lists.');
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -447,7 +450,23 @@ export default function Tasks() {
       {loadErr && <Alert severity="error" sx={{ mb: 2 }}>{loadErr}</Alert>}
       {saveErr && <Alert severity="warning" sx={{ mb: 2 }}>{saveErr}</Alert>}
 
-      {lists.length === 0 && !loadErr ? (
+      {loading ? (
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }} aria-label="Loading your lists">
+          {[0, 1, 2].map((i) => (
+            <Paper key={i} variant="outlined" sx={{ p: 2, flex: 1, minWidth: 0, display: { xs: i === 0 ? 'block' : 'none', sm: 'block' } }}>
+              <Skeleton variant="text" width="55%" height={28} />
+              <Skeleton variant="text" width="30%" height={18} sx={{ mb: 1.5 }} />
+              {[80, 64, 72].map((w, j) => (
+                <Box key={j} sx={{ display: 'flex', gap: 1, alignItems: 'center', py: 1 }}>
+                  <Skeleton variant="circular" width={20} height={20} />
+                  <Skeleton variant="text" width={`${w}%`} height={22} />
+                </Box>
+              ))}
+              <Skeleton variant="rounded" width="100%" height={36} sx={{ mt: 1 }} />
+            </Paper>
+          ))}
+        </Box>
+      ) : lists.length === 0 && !loadErr ? (
         <EmptyState
           icon={<ChecklistIcon fontSize="large" />}
           title="No lists yet"

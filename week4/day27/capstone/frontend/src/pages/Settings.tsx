@@ -53,7 +53,7 @@ export default function Settings() {
   if (!prefs) return <Box sx={{ textAlign: 'center', mt: 6 }}>{err ? <Alert severity="error">{err}</Alert> : <CircularProgress />}</Box>;
 
   return (
-    <Box sx={{ maxWidth: 640 }}>
+    <Box sx={{ maxWidth: 640, mx: 'auto' }}>
       <PageHeader
         title="Settings"
         description={profile ? `${profile.name} · ${profile.email} · ${profile.provider} · ${profile.role}` : undefined}

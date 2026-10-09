@@ -27,9 +27,9 @@ async function log(endpoint, req, result, promptLen) {
 
 router.post('/chat', validate(schemas.aiChat), async (req, res) => {
   const { message, history } = req.body;
-  const r = await ai.chat(message, history);
+  const r = await ai.chat(message, history, { userId: req.user.id });
   await log('chat', req, r, String(message).length);
-  res.json({ success: true, response: r.text, metadata: { model: r.model, response_time: r.response_time, mocked: r.mocked } });
+  res.json({ success: true, response: r.text, metadata: { model: r.model, response_time: r.response_time, mocked: r.mocked, tools_used: r.toolsUsed || [] } });
 });
 
 router.post('/generate', validate(schemas.aiGenerate), async (req, res) => {

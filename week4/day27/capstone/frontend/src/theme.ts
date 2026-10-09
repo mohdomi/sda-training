@@ -1,6 +1,6 @@
 import { createTheme } from '@mui/material';
 
-// Notion/Obsidian-inspired tokens. Light + dark stay in lockstep so the
+// Red / black / white identity. Light + dark stay in lockstep so the
 // existing theme toggle keeps working with identical structure.
 export type ThemeMode = 'light' | 'dark';
 
@@ -17,21 +17,21 @@ export function buildTheme(mode: ThemeMode) {
     palette: {
       mode,
       background: {
-        default: light ? '#FAF9F6' : '#191918',
-        paper: light ? '#FFFFFF' : '#20201F',
+        default: light ? '#FAF8F7' : '#0B0B0C',
+        paper: light ? '#FFFFFF' : '#141415',
       },
       text: {
-        primary: light ? '#252525' : '#E8E6E1',
-        secondary: light ? '#737373' : '#A3A099',
+        primary: light ? '#1A1A1A' : '#F5F4F2',
+        secondary: light ? '#6E6E6E' : '#A1A1A1',
       },
-      divider: light ? '#E7E5E0' : '#2E2D2B',
+      divider: light ? '#E8E2E0' : '#262628',
       primary: {
-        main: light ? '#4B54A6' : '#8B93E8',
+        main: light ? '#B91C1C' : '#E5484D',
         contrastText: '#FFFFFF',
       },
       success: { main: light ? '#3D9A50' : '#6FCF97' },
       warning: { main: light ? '#B7791F' : '#E5B567' },
-      error: { main: light ? '#C0453E' : '#E8837A' },
+      error: { main: light ? '#B91C1C' : '#E5484D' },
     },
     typography: {
       fontFamily: FONT_STACK,
@@ -50,7 +50,7 @@ export function buildTheme(mode: ThemeMode) {
         styleOverrides: {
           body: { fontFamily: FONT_STACK, fontFeatureSettings: '"cv11", "ss01"' },
           code: { fontFamily: MONO_STACK },
-          '*:focus-visible': { outline: '2px solid #4B54A6', outlineOffset: 2 },
+          '*:focus-visible': { outline: '2px solid #E5484D', outlineOffset: 2 },
           '@media (prefers-reduced-motion: reduce)': {
             '*': { animationDuration: '0.01ms !important', transitionDuration: '0.01ms !important' },
           },
@@ -60,7 +60,7 @@ export function buildTheme(mode: ThemeMode) {
         styleOverrides: {
           root: { borderRadius: 6, boxShadow: 'none', '&:hover': { boxShadow: 'none' } },
           outlined: {
-            borderColor: light ? '#E7E5E0' : '#2E2D2B',
+            borderColor: light ? '#E8E2E0' : '#262628',
           },
         },
       },
@@ -75,7 +75,7 @@ export function buildTheme(mode: ThemeMode) {
           root: {
             borderRadius: RADIUS,
             boxShadow: 'none',
-            border: `1px solid ${light ? '#E7E5E0' : '#2E2D2B'}`,
+            border: `1px solid ${light ? '#E8E2E0' : '#262628'}`,
             backgroundImage: 'none',
           },
         },
@@ -87,12 +87,12 @@ export function buildTheme(mode: ThemeMode) {
         styleOverrides: {
           root: {
             borderRadius: 6,
-            backgroundColor: light ? '#FFFFFF' : '#20201F',
+            backgroundColor: light ? '#FFFFFF' : '#141415',
           },
         },
       },
       MuiDivider: {
-        styleOverrides: { root: { borderColor: light ? '#E7E5E0' : '#2E2D2B' } },
+        styleOverrides: { root: { borderColor: light ? '#E8E2E0' : '#262628' } },
       },
       MuiChip: {
         styleOverrides: { root: { borderRadius: 6, fontWeight: 500 } },

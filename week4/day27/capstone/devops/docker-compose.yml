@@ -1,39 +1,84 @@
+# Capstone full stack: postgres + redis + backend + frontend.
+# One command:  docker compose up -d --build
+# App:          http://localhost:8080  (nginx → SPA + /api proxy)
+#                                (:80 is held by a host service on this box;
+#                                change back to "80:80" where free)
+# API direct:   http://localhost:5000
+#
+# Secrets (OPENROUTER_API_KEY, GOOGLE_*, JWT_SECRET) come from ../.env
+# (gitignored). Container hostnames are overridden below — the localhost
+# URLs in .env only apply to bare-metal dev.
+name: capstone
+
 services:
-  backend:
-    build: ../backend
-    ports: ["5000:5000"]
-    env_file: ../.env
-    environment:
-      - PORT=5000
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-  frontend:
-    build: ../frontend
-    ports: ["5173:80"]
-    depends_on: [backend]
   postgres:
     image: postgres:15-alpine
+    ports: ["5432:5432"]
     environment:
       - POSTGRES_DB=sda_capstone
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-    ports: ["5432:5432"]
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sda_capstone"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 12
+    restart: unless-stopped
+    networks: [app]
+
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 12
+    restart: unless-stopped
+    networks: [app]
+
+  backend:
+    build: ../backend
+    image: capstone-backend:latest
+    ports: ["5000:5000"]
+    env_file: ../.env
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - DB_ADAPTER=postgres
+      - POSTGRES_URL=postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/sda_capstone
+      - REDIS_URL=redis://redis:6379
+      - FRONTEND_URL=http://localhost:8080
+      - OAUTH_CALLBACK_BASE=http://localhost:5000
+      - OPENROUTER_REFERER=http://localhost:8080
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [app]
+
+  frontend:
+    build: ../frontend
+    image: capstone-frontend:latest
+    ports: ["8080:80"]
+    depends_on:
+      backend: { condition: service_started }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks: [app]
+
 volumes:
   pgdata:
+  redisdata:
+
+networks:
+  app:
+    driver: bridge

@@ -20,7 +20,7 @@ export default function Analytics() {
   const accent = theme.palette.primary.main;
   const muted = theme.palette.text.secondary;
   const grid = theme.palette.divider;
-  const SLICES = [accent, '#B7791F', '#3D9A50', '#A855F7', '#C0453E'];
+  const SLICES = [accent, '#8A1F1F', '#C27070', '#8A8A8A', '#D4D4D4'];
 
   useEffect(() => {
     setData(null); setErr(null);

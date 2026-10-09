@@ -13,7 +13,7 @@ export function MarkdownText({ text }: { text: string }) {
   const theme = useTheme();
   const border = theme.palette.divider;
   const surface =
-    theme.palette.mode === 'light' ? '#F4F2ED' : '#262624';
+    theme.palette.mode === 'light' ? '#F5F1EF' : '#1E1E20';
   return (
     <Box
       sx={{

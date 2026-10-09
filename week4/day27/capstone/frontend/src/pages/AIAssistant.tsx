@@ -29,7 +29,7 @@ function ChatTab() {
   };
 
   return (
-    <Box sx={{ maxWidth: 760, display: 'flex', flexDirection: 'column', minHeight: '60vh' }}>
+    <Box sx={{ maxWidth: 760, mx: 'auto', display: 'flex', flexDirection: 'column', minHeight: '60vh' }}>
       <Box sx={{ flex: 1 }}>
         {msgs.map((m, i) => (
           <Box key={i} sx={{ py: 1.5 }}>
@@ -94,7 +94,7 @@ function GenerateTab() {
   };
 
   return (
-    <Box sx={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Box sx={{ maxWidth: 760, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
       <TextField label="Topic" value={topic} onChange={(e) => setTopic(e.target.value)} />
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <FormControl sx={{ minWidth: 160 }}>
@@ -147,7 +147,7 @@ function RecommendTab() {
   };
 
   return (
-    <Box sx={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Box sx={{ maxWidth: 760, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Typography variant="body2" color="text.secondary">Get AI-suggested next tasks based on your profile.</Typography>
       <Box>
         <Button variant="contained" onClick={go} disabled={busy}>
@@ -166,7 +166,7 @@ function RecommendTab() {
 export default function AIAssistant() {
   const [tab, setTab] = useState(0);
   return (
-    <Box>
+    <Box sx={{ maxWidth: 760, mx: 'auto' }}>
       <PageHeader
         title="AI Assistant"
         description="Chat, generate content, or get recommendations from your connected models."

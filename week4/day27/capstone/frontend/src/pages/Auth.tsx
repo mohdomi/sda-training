@@ -153,7 +153,7 @@ export function Dashboard() {
   const topEndpoint = stats?.ai?.by_endpoint?.[0];
 
   return (
-    <Box sx={{ maxWidth: 860 }}>
+    <Box sx={{ maxWidth: 860, mx: 'auto' }}>
       <Typography variant="h3" component="h1" sx={{ fontWeight: 700, letterSpacing: '-0.02em' }}>
         {greeting()}, {user?.name || 'there'}.
       </Typography>
