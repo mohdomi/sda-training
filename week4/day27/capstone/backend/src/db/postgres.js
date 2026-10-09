@@ -13,10 +13,19 @@ function mapUser(r) {
   };
 }
 
+function mapList(r) {
+  if (!r) return null;
+  return {
+    id: r.id, userId: r.user_id, title: r.title, position: Number(r.position),
+    createdAt: r.created_at, updatedAt: r.updated_at,
+  };
+}
+
 function mapTask(r) {
   if (!r) return null;
   return {
-    id: r.id, userId: r.user_id, title: r.title, description: r.description,
+    id: r.id, userId: r.user_id, listId: r.list_id, position: Number(r.position ?? 0),
+    title: r.title, description: r.description,
     priority: r.priority, status: r.status, aiSummary: r.ai_summary,
     createdAt: r.created_at, updatedAt: r.updated_at,
   };
@@ -91,12 +100,53 @@ export default class PostgresStore {
   }
 
   // ---- tasks ----
-  async createTask({ userId, title, description = '', priority = 'medium', status = 'todo' }) {
+  async _defaultListId(userId) {
     const r = await this.pool.query(
-      `INSERT INTO tasks(user_id,title,description,priority,status) VALUES($1,$2,$3,$4,$5) RETURNING *`,
-      [userId, title, description, priority, status],
+      'SELECT id FROM task_lists WHERE user_id=$1 ORDER BY position LIMIT 1', [userId]);
+    if (r.rows[0]) return r.rows[0].id;
+    const c = await this.pool.query(
+      `INSERT INTO task_lists(user_id,title,position) VALUES($1,'My Tasks',1024) RETURNING id`, [userId]);
+    return c.rows[0].id;
+  }
+
+  async createTask({ userId, listId = null, title, description = '', priority = 'medium', status = 'todo' }) {
+    const lid = listId || await this._defaultListId(userId);
+    // ensure the list belongs to the user
+    const own = await this.pool.query('SELECT id FROM task_lists WHERE id=$1 AND user_id=$2', [lid, userId]);
+    if (!own.rows[0]) { const e = new Error('List not found'); e.status = 404; throw e; }
+    const m = await this.pool.query(
+      'SELECT COALESCE(MAX(position),0) AS mx FROM tasks WHERE list_id=$1', [lid]);
+    const r = await this.pool.query(
+      `INSERT INTO tasks(user_id,list_id,position,title,description,priority,status)
+       VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [userId, lid, Number(m.rows[0].mx) + 1024, title, description, priority, status],
     );
     return mapTask(r.rows[0]);
+  }
+
+  // Whole board in list→task position order (single call for the UI).
+  async getBoard(userId) {
+    await this._defaultListId(userId); // first run: ensure "My Tasks"
+    const lists = await this.pool.query(
+      'SELECT * FROM task_lists WHERE user_id=$1 ORDER BY position', [userId]);
+    const tasks = await this.pool.query(
+      `SELECT t.* FROM tasks t
+       JOIN task_lists l ON l.id = t.list_id
+       WHERE t.user_id=$1 ORDER BY l.position, t.position`,
+      [userId]);
+    // legacy tasks with NULL list_id (pre-backfill clients): attach to first list
+    const unlisted = await this.pool.query(
+      'SELECT * FROM tasks WHERE user_id=$1 AND list_id IS NULL ORDER BY created_at DESC', [userId]);
+    const mapped = lists.rows.map(mapList);
+    const byList = new Map(mapped.map((l) => [l.id, []]));
+    for (const t of tasks.rows) {
+      const arr = byList.get(t.list_id);
+      if (arr) arr.push(mapTask(t));
+    }
+    if (unlisted.rows.length && mapped.length) {
+      byList.get(mapped[0].id).unshift(...unlisted.rows.map(mapTask));
+    }
+    return mapped.map((l) => ({ ...l, tasks: byList.get(l.id) }));
   }
 
   async listTasks(userId) {
@@ -105,13 +155,18 @@ export default class PostgresStore {
   }
 
   async updateTask(userId, id, patch) {
-    const allowed = ['title', 'description', 'priority', 'status', 'aiSummary'];
+    const allowed = ['title', 'description', 'priority', 'status', 'aiSummary', 'listId', 'position'];
     const sets = [];
     const vals = [];
+    // moving across lists: verify destination belongs to the user
+    if (patch.listId !== undefined) {
+      const own = await this.pool.query('SELECT id FROM task_lists WHERE id=$1 AND user_id=$2', [patch.listId, userId]);
+      if (!own.rows[0]) { const e = new Error('List not found'); e.status = 404; throw e; }
+    }
     for (const k of allowed) {
       if (patch[k] !== undefined) {
-        const col = k === 'aiSummary' ? 'ai_summary' : k;
-        vals.push(patch[k]);
+        const col = k === 'aiSummary' ? 'ai_summary' : k === 'listId' ? 'list_id' : k;
+        vals.push(k === 'position' ? Number(patch[k]) : patch[k]);
         sets.push(`${col}=$${vals.length}`);
       }
     }
@@ -129,6 +184,73 @@ export default class PostgresStore {
     const r = await this.pool.query('DELETE FROM tasks WHERE id=$1 AND user_id=$2 RETURNING *', [id, userId]);
     if (!r.rows[0]) { const e = new Error('Task not found'); e.status = 404; throw e; }
     return mapTask(r.rows[0]);
+  }
+
+  // ---- task lists ----
+  async createList({ userId, title }) {
+    const m = await this.pool.query(
+      'SELECT COALESCE(MAX(position),0) AS mx FROM task_lists WHERE user_id=$1', [userId]);
+    const r = await this.pool.query(
+      `INSERT INTO task_lists(user_id,title,position) VALUES($1,$2,$3) RETURNING *`,
+      [userId, title, Number(m.rows[0].mx) + 1024],
+    );
+    return { ...mapList(r.rows[0]), tasks: [] };
+  }
+
+  async renameList(userId, id, title) {
+    const r = await this.pool.query(
+      `UPDATE task_lists SET title=$3, updated_at=now()
+       WHERE id=$1 AND user_id=$2 RETURNING *`,
+      [id, userId, title],
+    );
+    if (!r.rows[0]) { const e = new Error('List not found'); e.status = 404; throw e; }
+    return mapList(r.rows[0]);
+  }
+
+  async deleteList(userId, id) {
+    const left = await this.pool.query('SELECT COUNT(*)::int AS n FROM task_lists WHERE user_id=$1', [userId]);
+    if (left.rows[0].n <= 1) {
+      const e = new Error('Cannot delete your last list');
+      e.status = 400;
+      throw e;
+    }
+    const r = await this.pool.query(
+      'DELETE FROM task_lists WHERE id=$1 AND user_id=$2 RETURNING *', [id, userId]);
+    if (!r.rows[0]) { const e = new Error('List not found'); e.status = 404; throw e; }
+    return mapList(r.rows[0]);
+  }
+
+  async reorderLists(userId, orderedIds) {
+    if (!Array.isArray(orderedIds) || !orderedIds.length) {
+      const e = new Error('orderedIds must be a non-empty array');
+      e.status = 400;
+      throw e;
+    }
+    const own = await this.pool.query('SELECT id FROM task_lists WHERE user_id=$1', [userId]);
+    const ownIds = new Set(own.rows.map((r) => r.id));
+    if (orderedIds.length !== ownIds.size || !orderedIds.every((id) => ownIds.has(id))) {
+      const e = new Error('orderedIds must contain exactly your lists');
+      e.status = 400;
+      throw e;
+    }
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      let pos = 1024;
+      for (const id of orderedIds) {
+        await client.query('UPDATE task_lists SET position=$2 WHERE id=$1', [id, pos]);
+        pos += 1024;
+      }
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+    const r = await this.pool.query(
+      'SELECT * FROM task_lists WHERE user_id=$1 ORDER BY position', [userId]);
+    return r.rows.map(mapList);
   }
 
   // ---- refresh token families ----

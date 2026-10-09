@@ -10,6 +10,7 @@ import { Server } from 'socket.io';
 import errorHandler from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.js';
 import taskRoutes from './routes/tasks.js';
+import listRoutes from './routes/lists.js';
 import userRoutes from './routes/users.js';
 import aiRoutes from './routes/ai.js';
 import analyticsRoutes from './routes/analytics.js';
@@ -56,6 +57,7 @@ app.get('/health', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', passport.initialize(), oauthRouter);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/lists', listRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/analytics', analyticsRoutes);

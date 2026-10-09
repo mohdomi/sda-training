@@ -38,6 +38,7 @@ export const schemas = {
     description: z.string().max(2000).default(''),
     priority: z.enum(['low', 'medium', 'high']).default('medium'),
     status: z.enum(['todo', 'doing', 'done']).default('todo'),
+    listId: z.string().uuid().optional(),
   }),
   taskUpdate: z.object({
     title: z.string().trim().min(1).max(200).optional(),
@@ -45,7 +46,13 @@ export const schemas = {
     priority: z.enum(['low', 'medium', 'high']).optional(),
     status: z.enum(['todo', 'doing', 'done']).optional(),
     aiSummary: z.string().max(4000).nullable().optional(),
+    listId: z.string().uuid().nullable().optional(),
+    position: z.number().finite().optional(),
   }).refine((o) => Object.keys(o).length > 0, { message: 'At least one field required' }),
+
+  listCreate: z.object({ title: z.string().trim().min(1).max(100) }),
+  listRename: z.object({ title: z.string().trim().min(1).max(100) }),
+  listOrder: z.object({ orderedIds: z.array(z.string().uuid()).min(1) }),
 
   aiChat: z.object({
     message: z.string().trim().min(1).max(4000),

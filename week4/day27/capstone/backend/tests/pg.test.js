@@ -90,6 +90,62 @@ describe('postgres store', () => {
     await s.close();
   });
 
+  test('lists + move + reorder (skip if no PG)', async (t) => {
+    let pg;
+    try {
+      pg = await import('pg');
+    } catch {
+      t.skip('pg module missing');
+      return;
+    }
+    const probe = new pg.default.Pool({ connectionString: url, connectionTimeoutMillis: 3000 });
+    try {
+      await probe.query('SELECT 1 FROM task_lists LIMIT 1');
+    } catch (e) {
+      await probe.end().catch(() => {});
+      t.skip(`no postgres/migrations: ${e.message}`);
+      return;
+    }
+    await probe.end().catch(() => {});
+
+    const { default: PostgresStore } = await import('../src/db/postgres.js');
+    const s = new PostgresStore(url);
+    const email = `pglist-${Date.now()}@capstone.dev`;
+    const u = await s.createUser({ name: 'LST', email, passwordHash: 'x' });
+    // fresh user gets a default list via getBoard
+    let board = await s.getBoard(u.id);
+    assert.equal(board.length, 1);
+    assert.equal(board[0].title, 'My Tasks');
+    const other = await s.createList({ userId: u.id, title: 'Today' });
+    const t1 = await s.createTask({ userId: u.id, title: 'moveme' });
+    assert.equal(t1.listId, board[0].id); // defaults to first list
+    const explicit = await s.createTask({ userId: u.id, listId: other.id, title: 'explicit-list' });
+    assert.equal(explicit.listId, other.id); // explicit listId honored
+    await s.deleteTask(u.id, explicit.id);
+    // move across lists with explicit rank
+    const moved = await s.updateTask(u.id, t1.id, { listId: other.id, position: 512 });
+    assert.equal(moved.listId, other.id);
+    assert.equal(moved.position, 512);
+    board = await s.getBoard(u.id);
+    assert.equal(board.find((l) => l.id === board[0].id)?.tasks.length, 0);
+    assert.equal(board.find((l) => l.id === other.id)?.tasks.length, 1);
+    // reorder lists
+    const reordered = await s.reorderLists(u.id, [other.id, board[0].id]);
+    assert.deepEqual(reordered.map((l) => l.id), [other.id, board[0].id]);
+    // rename + last-list guard
+    await s.renameList(u.id, other.id, 'Renamed');
+    await assert.rejects(() => s.reorderLists(u.id, [other.id]), /exactly your lists/);
+    await s.deleteList(u.id, other.id);
+    await assert.rejects(() => s.deleteList(u.id, board[0].id), /last list/);
+    // foreign list isolation
+    const u2 = await s.createUser({ name: 'L2', email: `pglist2-${Date.now()}@capstone.dev`, passwordHash: 'x' });
+    await assert.rejects(() => s.updateTask(u2.id, t1.id, { listId: other.id }), /Task not found|List not found/);
+    await s.pool.query('DELETE FROM tasks WHERE user_id IN ($1,$2)', [u.id, u2.id]);
+    await s.pool.query('DELETE FROM task_lists WHERE user_id IN ($1,$2)', [u.id, u2.id]);
+    await s.pool.query('DELETE FROM users WHERE id IN ($1,$2)', [u.id, u2.id]);
+    await s.close();
+  });
+
   test('redis get/set (+memory fallback)', async () => {
     const cache = await import('../src/cache.js');
     await cache.set('cap:test', { a: 1 }, 10);

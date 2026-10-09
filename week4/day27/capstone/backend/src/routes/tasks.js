@@ -13,8 +13,8 @@ router.get('/', async (req, res, next) => {
 
 router.post('/', validate(schemas.taskCreate), async (req, res, next) => {
   try {
-    const { title, description, priority, status } = req.body;
-    const task = await store.createTask({ userId: req.user.id, title, description, priority, status });
+    const { title, description, priority, status, listId } = req.body;
+    const task = await store.createTask({ userId: req.user.id, listId: listId || null, title, description, priority, status });
     req.app.get('io')?.to(`user:${req.user.id}`).emit('task:created', task);
     res.status(201).json({ success: true, task });
   } catch (e) { next(e); }

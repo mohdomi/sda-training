@@ -97,20 +97,56 @@ const userId = userR.rows[0].id;
 if (CLEAR) {
   await pool.query(`DELETE FROM ai_logs WHERE user_id=$1 AND (request->>'seeded')='true'`, [userId]);
   await pool.query(`DELETE FROM tasks WHERE user_id=$1 AND description LIKE '%[seeded]%'`, [userId]);
+  await pool.query(`DELETE FROM task_lists WHERE user_id=$1 AND title LIKE '%[seeded]'`, [userId]);
   console.log('cleared previous seeded rows');
 }
 
-let tasks = 0;
+// Three Google-Tasks-style lists; positions spaced 1024 apart (float-rank).
+const LIST_DEFS = ['Important Tasks [seeded]', "Today's Tasks [seeded]", 'Science Project [seeded]'];
+const listIds = [];
+{
+  let pos = 1024;
+  for (const title of LIST_DEFS) {
+    const r = await pool.query(
+      `INSERT INTO task_lists(user_id,title,position) VALUES($1,$2,$3) RETURNING id`,
+      [userId, title, pos],
+    );
+    listIds.push(r.rows[0].id);
+    pos += 1024;
+  }
+}
+const listPos = new Map(listIds.map((id) => [id, 0]));
+const nextPos = (lid) => { const p = (listPos.get(lid) || 0) + 1024; listPos.set(lid, p); return p; };
+
+// Fixed Science Project set (user's example: rich context for AI summary)
+const SCIENCE = [
+  ['Create project outline', 'Define scope, sections, and grading rubric for the science project.'],
+  ['Make charts', 'Plot experiment results: bar chart for group A vs B, line chart over time.'],
+  ['Write analysis', 'Explain what the charts show and why results differ.'],
+  ['Push to prod', 'Publish the final report to the class site and submit.'],
+];
+for (const [title, desc] of SCIENCE) {
+  const created = randTime(DAYS);
+  await pool.query(
+    `INSERT INTO tasks(user_id,list_id,position,title,description,priority,status,created_at,updated_at)
+     VALUES($1,$2,$3,$4,$5,'high','doing',$6,$6)`,
+    [userId, listIds[2], nextPos(listIds[2]), `${title} [seeded]`, `${desc} [seeded]`, created],
+  );
+}
+
+let tasks = SCIENCE.length;
 for (let i = 0; i < N_TASKS; i++) {
   const [title, desc] = pick(TASK_TOPICS);
   const status = pickW([['todo', 40], ['doing', 25], ['done', 35]]);
   const priority = pickW([['low', 20], ['medium', 50], ['high', 30]]);
   const created = randTime(DAYS);
   const updated = status === 'todo' ? created : new Date(Math.min(Date.now(), new Date(created).getTime() + rand(1, 72) * 3600 * 1000)).toISOString();
+  // Weight random tasks toward the first two lists; Science Project keeps its curated set.
+  const lid = pickW([[listIds[0], 40], [listIds[1], 45], [listIds[2], 15]]);
   await pool.query(
-    `INSERT INTO tasks(user_id,title,description,priority,status,created_at,updated_at)
-     VALUES($1,$2,$3,$4,$5,$6,$7)`,
-    [userId, `${title} #${i + 1}`, `${desc} [seeded]`, priority, status, created, updated],
+    `INSERT INTO tasks(user_id,list_id,position,title,description,priority,status,created_at,updated_at)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    [userId, lid, nextPos(lid), `${title} #${i + 1}`, `${desc} [seeded]`, priority, status, created, updated],
   );
   tasks++;
 }

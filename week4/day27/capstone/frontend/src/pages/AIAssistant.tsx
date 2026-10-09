@@ -5,6 +5,7 @@ import {
 } from '@mui/material';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import { PageHeader, EmptyState } from '../components/primitives';
+import { MarkdownText } from '../components/Markdown';
 import api from '../services/api';
 
 type Msg = { role: string; content: string; meta?: string };
@@ -36,7 +37,11 @@ function ChatTab() {
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
               {m.role === 'user' ? 'You' : 'Assistant'}
             </Typography>
-            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{m.content}</Typography>
+            {m.role === 'user' ? (
+              <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{m.content}</Typography>
+            ) : (
+              <MarkdownText text={m.content} />
+            )}
             {m.meta && <Chip size="small" variant="outlined" label={m.meta} sx={{ mt: 1 }} />}
           </Box>
         ))}
@@ -119,7 +124,7 @@ function GenerateTab() {
       </Box>
       {out && (
         <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 2 }}>
-          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{out}</Typography>
+          <MarkdownText text={out} />
           {meta && <Chip size="small" variant="outlined" label={meta} sx={{ mt: 1 }} />}
         </Box>
       )}
@@ -151,7 +156,7 @@ function RecommendTab() {
       </Box>
       {out && (
         <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 2 }}>
-          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{out}</Typography>
+          <MarkdownText text={out} />
         </Box>
       )}
     </Box>

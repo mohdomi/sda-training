@@ -11,9 +11,11 @@ export default class FileStore {
     this.usersFile = path.join(dataDir, 'users.json');
     this.tasksFile = path.join(dataDir, 'tasks.json');
     this.aiLogsFile = path.join(dataDir, 'ai_logs.json');
+    this.listsFile = path.join(dataDir, 'lists.json');
     this.users = this._load(this.usersFile);
     this.tasks = this._load(this.tasksFile);
     this.aiLogs = this._load(this.aiLogsFile);
+    this.lists = this._load(this.listsFile);
   }
 
   _load(file) {
@@ -28,6 +30,7 @@ export default class FileStore {
     fs.writeFileSync(this.usersFile, JSON.stringify(this.users, null, 2));
     fs.writeFileSync(this.tasksFile, JSON.stringify(this.tasks, null, 2));
     fs.writeFileSync(this.aiLogsFile, JSON.stringify(this.aiLogs, null, 2));
+    fs.writeFileSync(this.listsFile, JSON.stringify(this.lists, null, 2));
   }
 
   uid() {
@@ -79,14 +82,51 @@ export default class FileStore {
   }
 
   // ---- tasks ----
-  async createTask({ userId, title, description = '', priority = 'medium', status = 'todo' }) {
+  _defaultListId(userId) {
+    let list = this.lists.filter((l) => l.userId === userId).sort((a, b) => a.position - b.position)[0];
+    if (!list) {
+      list = {
+        id: this.uid(), userId, title: 'My Tasks', position: 1024,
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      };
+      this.lists.push(list);
+      this._save();
+    }
+    return list.id;
+  }
+
+  async createTask({ userId, listId = null, title, description = '', priority = 'medium', status = 'todo' }) {
+    const lid = listId || this._defaultListId(userId);
+    if (!this.lists.some((l) => l.id === lid && l.userId === userId)) {
+      const e = new Error('List not found'); e.status = 404; throw e;
+    }
+    const mx = this.tasks.filter((t) => t.listId === lid).reduce((m, t) => Math.max(m, t.position || 0), 0);
     const task = {
-      id: this.uid(), userId, title, description, priority, status,
+      id: this.uid(), userId, listId: lid, position: mx + 1024,
+      title, description, priority, status,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     };
     this.tasks.push(task);
     this._save();
     return task;
+  }
+
+  async getBoard(userId) {
+    this._defaultListId(userId); // first run: ensure "My Tasks"
+    const lists = this.lists
+      .filter((l) => l.userId === userId)
+      .sort((a, b) => a.position - b.position);
+    const byList = new Map(lists.map((l) => [l.id, []]));
+    for (const t of this.tasks.filter((x) => x.userId === userId)) {
+      const lid = t.listId && byList.has(t.listId) ? t.listId : lists[0]?.id;
+      if (lid) {
+        if (!t.listId) t.listId = lid;
+        byList.get(lid).push(t);
+      }
+    }
+    for (const arr of byList.values()) arr.sort((a, b) => (a.position || 0) - (b.position || 0));
+    this._save();
+    return lists.map((l) => ({ ...l, tasks: byList.get(l.id) }));
   }
 
   async listTasks(userId) {
@@ -96,6 +136,11 @@ export default class FileStore {
   async updateTask(userId, id, patch) {
     const t = this.tasks.find((x) => x.id === id && x.userId === userId);
     if (!t) { const e = new Error('Task not found'); e.status = 404; throw e; }
+    if (patch.listId !== undefined) {
+      if (!this.lists.some((l) => l.id === patch.listId && l.userId === userId)) {
+        const e = new Error('List not found'); e.status = 404; throw e;
+      }
+    }
     Object.assign(t, patch, { updatedAt: new Date().toISOString() });
     this._save();
     return t;
@@ -107,6 +152,62 @@ export default class FileStore {
     const [t] = this.tasks.splice(i, 1);
     this._save();
     return t;
+  }
+
+  // ---- task lists ----
+  async createList({ userId, title }) {
+    const mx = this.lists.filter((l) => l.userId === userId).reduce((m, l) => Math.max(m, l.position || 0), 0);
+    const list = {
+      id: this.uid(), userId, title, position: mx + 1024,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    };
+    this.lists.push(list);
+    this._save();
+    return { ...list, tasks: [] };
+  }
+
+  async renameList(userId, id, title) {
+    const l = this.lists.find((x) => x.id === id && x.userId === userId);
+    if (!l) { const e = new Error('List not found'); e.status = 404; throw e; }
+    l.title = title;
+    l.updatedAt = new Date().toISOString();
+    this._save();
+    return { ...l };
+  }
+
+  async deleteList(userId, id) {
+    const mine = this.lists.filter((l) => l.userId === userId);
+    if (mine.length <= 1) {
+      const e = new Error('Cannot delete your last list');
+      e.status = 400;
+      throw e;
+    }
+    const i = this.lists.findIndex((x) => x.id === id && x.userId === userId);
+    if (i < 0) { const e = new Error('List not found'); e.status = 404; throw e; }
+    const [l] = this.lists.splice(i, 1);
+    this.tasks = this.tasks.filter((t) => t.listId !== id);
+    this._save();
+    return { ...l };
+  }
+
+  async reorderLists(userId, orderedIds) {
+    const mine = this.lists.filter((l) => l.userId === userId);
+    const ownIds = new Set(mine.map((l) => l.id));
+    if (orderedIds.length !== ownIds.size || !orderedIds.every((x) => ownIds.has(x))) {
+      const e = new Error('orderedIds must contain exactly your lists');
+      e.status = 400;
+      throw e;
+    }
+    let pos = 1024;
+    for (const id of orderedIds) {
+      this.lists.find((l) => l.id === id).position = pos;
+      pos += 1024;
+    }
+    this._save();
+    return this.lists
+      .filter((l) => l.userId === userId)
+      .sort((a, b) => a.position - b.position)
+      .map((l) => ({ ...l }));
   }
 
   async logAI({ userId = null, endpoint = 'chat', model, request = {}, response = '', latencyMs = 0, mocked = false }) {
