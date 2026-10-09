@@ -1,0 +1,66 @@
+# Capstone CI: backend tests (live PG + Redis services) + frontend typecheck/build.
+# Tests + builds only — no image pushes, no deploys.
+name: capstone-ci
+
+on:
+  push:
+    paths: ["week4/day27/capstone/**"]
+  pull_request:
+    paths: ["week4/day27/capstone/**"]
+  workflow_dispatch:
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: week4/day27/capstone/backend
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: sda_capstone
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sda_capstone"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      POSTGRES_URL: postgresql://postgres:password@localhost:5432/sda_capstone
+      REDIS_URL: redis://localhost:6379
+      DB_ADAPTER: postgres
+      JWT_SECRET: ci-test-secret
+      OPENROUTER_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: week4/day27/capstone/backend/package-lock.json
+      - run: npm ci
+      - run: npm run migrate
+      - run: npm test
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: week4/day27/capstone/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: week4/day27/capstone/frontend/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build
