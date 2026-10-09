@@ -1,6 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { authenticate } from '../middleware/auth.js';
+import { validate, schemas } from '../middleware/validation.js';
 import store from '../db/index.js';
 import * as ai from '../services/aiService.js';
 
@@ -24,30 +25,28 @@ async function log(endpoint, req, result, promptLen) {
   } catch { /* logging must not break responses */ }
 }
 
-router.post('/chat', async (req, res) => {
-  const { message, history } = req.body || {};
-  if (!message) return res.status(400).json({ success: false, message: 'message required' });
-  const r = await ai.chat(message, history || []);
+router.post('/chat', validate(schemas.aiChat), async (req, res) => {
+  const { message, history } = req.body;
+  const r = await ai.chat(message, history);
   await log('chat', req, r, String(message).length);
   res.json({ success: true, response: r.text, metadata: { model: r.model, response_time: r.response_time, mocked: r.mocked } });
 });
 
-router.post('/generate', async (req, res) => {
-  const r = await ai.generateContent(req.body || {});
+router.post('/generate', validate(schemas.aiGenerate), async (req, res) => {
+  const r = await ai.generateContent(req.body);
   await log('generate', req, r, JSON.stringify(req.body || {}).length);
   res.json({ success: true, content: r.text, metadata: { model: r.model, mocked: r.mocked } });
 });
 
-router.post('/summarize', async (req, res) => {
-  const { text, max_length } = req.body || {};
-  if (!text) return res.status(400).json({ success: false, message: 'text required' });
-  const r = await ai.summarizeText(text, max_length || 300);
+router.post('/summarize', validate(schemas.aiSummarize), async (req, res) => {
+  const { text, max_length } = req.body;
+  const r = await ai.summarizeText(text, max_length);
   await log('summarize', req, r, String(text).length);
   res.json({ success: true, summary: r.text, metadata: { model: r.model, mocked: r.mocked } });
 });
 
-router.post('/recommendations', async (req, res) => {
-  const r = await ai.getRecommendations(req.body || {});
+router.post('/recommendations', validate(schemas.aiRecommendations), async (req, res) => {
+  const r = await ai.getRecommendations(req.body);
   await log('recommendations', req, r, JSON.stringify(req.body || {}).length);
   res.json({ success: true, recommendations: r.text, metadata: { model: r.model, mocked: r.mocked } });
 });

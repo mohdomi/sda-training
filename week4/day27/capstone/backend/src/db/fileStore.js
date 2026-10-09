@@ -44,6 +44,7 @@ export default class FileStore {
     const user = {
       id: this.uid(), name, email: email.toLowerCase(), passwordHash,
       role, provider, providerId, avatar, isActive: true,
+      preferences: {},
       createdAt: new Date().toISOString(),
     };
     this.users.push(user);
@@ -63,6 +64,18 @@ export default class FileStore {
     const u = this.users.find((x) => x.id === userId);
     if (u) { u.provider = provider; u.providerId = providerId; this._save(); }
     return u;
+  }
+
+  async updatePreferences(userId, patch) {
+    const u = this.users.find((x) => x.id === userId);
+    if (!u) { const e = new Error('User not found'); e.status = 404; throw e; }
+    u.preferences = {
+      ...(u.preferences || {}),
+      ...patch,
+      notifications: { ...((u.preferences || {}).notifications || {}), ...(patch.notifications || {}) },
+    };
+    this._save();
+    return { ...u };
   }
 
   // ---- tasks ----

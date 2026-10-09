@@ -75,6 +75,21 @@ export default class PostgresStore {
     return mapUser(r.rows[0] || null);
   }
 
+  async updatePreferences(userId, patch) {
+    const cur = await this.pool.query('SELECT preferences FROM users WHERE id=$1', [userId]);
+    if (!cur.rows[0]) { const e = new Error('User not found'); e.status = 404; throw e; }
+    const merged = {
+      ...cur.rows[0].preferences,
+      ...patch,
+      notifications: { ...(cur.rows[0].preferences?.notifications || {}), ...(patch.notifications || {}) },
+    };
+    const r = await this.pool.query(
+      'UPDATE users SET preferences=$2, updated_at=now() WHERE id=$1 RETURNING *',
+      [userId, JSON.stringify(merged)],
+    );
+    return mapUser(r.rows[0]);
+  }
+
   // ---- tasks ----
   async createTask({ userId, title, description = '', priority = 'medium', status = 'todo' }) {
     const r = await this.pool.query(

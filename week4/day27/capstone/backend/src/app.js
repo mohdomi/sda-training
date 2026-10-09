@@ -10,6 +10,7 @@ import { Server } from 'socket.io';
 import errorHandler from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.js';
 import taskRoutes from './routes/tasks.js';
+import userRoutes from './routes/users.js';
 import aiRoutes from './routes/ai.js';
 import analyticsRoutes from './routes/analytics.js';
 import store from './db/index.js';
@@ -30,17 +31,32 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
 app.use('/api/', rateLimit({ windowMs: 15 * 60 * 1000, max: 300 }));
 
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy', time: new Date().toISOString(), uptime: process.uptime(),
+app.get('/health', async (req, res) => {
+  // Deep check: actually touches PG + Redis so outages show up here first.
+  let pg = 'unknown';
+  let redisState = 'unknown';
+  try {
+    if (typeof store.ping === 'function') { await store.ping(); pg = 'up'; }
+    else pg = 'n/a';
+  } catch { pg = 'down'; }
+  try {
+    const { ready } = await import('./cache.js');
+    redisState = (await ready()).redis ? 'up' : 'down';
+  } catch { redisState = 'down'; }
+  const degraded = pg === 'down' || redisState === 'down';
+  res.status(degraded ? 503 : 200).json({
+    status: degraded ? 'degraded' : 'healthy',
+    time: new Date().toISOString(), uptime: process.uptime(),
     db: process.env.DB_ADAPTER || 'file',
     store: store.constructor.name,
+    pg, redis: redisState,
   });
 });
 
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', passport.initialize(), oauthRouter);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/analytics', analyticsRoutes);
 

@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import store from '../db/index.js';
 import * as cache from '../cache.js';
+import { validate, schemas } from '../middleware/validation.js';
 import { sign, issuePair, rotateRefresh, revokeFamilyByToken, authenticate, validatePassword } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -25,10 +26,9 @@ async function issuePairWithFallback(user) {
   }
 }
 
-router.post('/register', async (req, res, next) => {
+router.post('/register', validate(schemas.register), async (req, res, next) => {
   try {
-    const { name, email, password } = req.body || {};
-    if (!name || !email || !password) return res.status(400).json({ success: false, message: 'name/email/password required' });
+    const { name, email, password } = req.body;
     validatePassword(password);
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await store.createUser({ name, email, passwordHash });
@@ -37,11 +37,18 @@ router.post('/register', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/login', async (req, res, next) => {
+router.post('/login', validate(schemas.login), async (req, res, next) => {
   try {
     const { email, password } = req.body || {};
     const user = await store.findUserByEmail(email || '');
-    if (!user || !user.passwordHash) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    if (!user.passwordHash) {
+      return res.status(401).json({
+        success: false,
+        message: 'This account uses Google sign-in — use Continue with Google',
+        oauth: true,
+      });
+    }
     const ok = await bcrypt.compare(password || '', user.passwordHash);
     if (!ok) return res.status(401).json({ success: false, message: 'Invalid credentials' });
     const pair = await issuePairWithFallback(user);
@@ -49,10 +56,9 @@ router.post('/login', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/refresh', async (req, res, next) => {
+router.post('/refresh', validate(schemas.refresh), async (req, res, next) => {
   try {
-    const { refreshToken } = req.body || {};
-    if (!refreshToken) return res.status(400).json({ success: false, message: 'refreshToken required' });
+    const { refreshToken } = req.body;
     const pair = await rotateRefresh(refreshToken, cache);
     res.json({ success: true, token: pair.accessToken, ...pair });
   } catch (e) { next(e); }
@@ -68,9 +74,9 @@ router.get('/me', authenticate, (req, res) => {
   res.json({ success: true, user: req.user });
 });
 
-// OAuth status (providers wired in src/oauth.js when keys present)
+// OAuth status (Google only; wired in src/oauth.js when keys present)
 router.get('/oauth/status', (req, res) => {
-  res.json({ success: true, providers: { google: Boolean(process.env.GOOGLE_CLIENT_ID), github: Boolean(process.env.GITHUB_CLIENT_ID) } });
+  res.json({ success: true, providers: { google: Boolean(process.env.GOOGLE_CLIENT_ID) } });
 });
 
 export default router;

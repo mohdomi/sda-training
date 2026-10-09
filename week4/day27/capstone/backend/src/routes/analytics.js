@@ -1,12 +1,13 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { validate, schemas } from '../middleware/validation.js';
 import store from '../db/index.js';
 
 const router = express.Router();
 router.use(authenticate);
 
 // GET /api/analytics/overview?range=7d|30d — user-scoped, empty-safe
-router.get('/overview', async (req, res, next) => {
+router.get('/overview', validate(schemas.analyticsRange, 'query'), async (req, res, next) => {
   try {
     const range = req.query.range === '7d' ? 7 : 30;
     if (typeof store.getAnalytics !== 'function') {

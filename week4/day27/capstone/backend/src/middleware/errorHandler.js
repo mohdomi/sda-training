@@ -2,5 +2,7 @@
 export default function errorHandler(err, req, res, next) {
   const status = err.status || 500;
   if (status >= 500) console.error(err);
-  res.status(status).json({ success: false, message: err.message || 'Server error' });
+  const body = { success: false, message: err.message || 'Server error' };
+  if (Array.isArray(err.details) && err.details.length) body.details = err.details;
+  res.status(status).json(body);
 }

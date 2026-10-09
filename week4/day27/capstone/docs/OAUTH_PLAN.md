@@ -1,4 +1,17 @@
-# OAuth — IMPLEMENTED (Phase 2D, verified 2026-10-07)
+# OAuth — Google-only, full-page flow (revamped: popups removed)
+
+Same-tab flow: frontend → `GET /api/auth/google` → Google → backend
+`/google/callback` → find-or-create by verified email → JWT pair →
+302 to `{frontend}/oauth/callback?code=<one-time>` → frontend exchanges via
+`POST /api/auth/oauth/exchange` → dashboard. Stateless, `state:true` CSRF via
+Redis StateStore (carries return origin, any localhost port), structured logs
+(`oauth google start/callback ok/fail`, `oauth exchange ok/invalid`).
+
+Previous iterations (popup + postMessage, GitHub) removed: popup delivery
+across the :5000↔:517x origin split plus opener loss in Brave/Firefox made it
+unreliable. GitHub strategy + `passport-github2` dep removed.
+
+Original plan (kept for reference):
 
 Stateless Authorization Code Flow, no server sessions:
 - `backend/src/oauth.js` — passport `passport-google-oauth20` (scopes

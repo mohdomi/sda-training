@@ -9,19 +9,26 @@ const mem = new Map(); // key -> { val, exp }
 async function init() {
   if (redis) return redis;
   const url = process.env.REDIS_URL || 'redis://localhost:6379';
+  let client = null;
   try {
     const { default: IORedis } = await import('ioredis');
-    const client = new IORedis(url, {
+    client = new IORedis(url, {
       lazyConnect: true, maxRetriesPerRequest: 1,
       connectTimeout: 2000, enableOfflineQueue: false,
+      // No background retry storms when Redis is down — fail fast, use memory.
+      retryStrategy: () => null,
     });
+    // Swallow error events from construction onward (else unhandled 'error').
+    client.on('error', () => { useRedis = false; });
     await client.connect();
     await client.ping();
     useRedis = true;
     redis = client;
-    redis.on('error', () => { useRedis = false; });
     return redis;
   } catch {
+    try { await client?.disconnect(); } catch { /* ignore */ }
+    // Reset so a later call retries the connection (e.g. Redis came back).
+    initPromise = null;
     useRedis = false;
     redis = null;
     return null;
